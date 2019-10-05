@@ -1,0 +1,837 @@
+---
+title: "Baseball Analytics"
+author: "Zhe Wang"
+date: 
+output: beamer_presentation
+---
+
+## Syllabus
+
+
+
+- Where to find the data?
+- How to generate the basic graphs?
+- What's the relation between runs and wins?
+- Career Trajectories
+- Run Expectancy
+
+
+## What is Sabermetrics?
+
+
+Sabermetrics is the empirical analysis of baseball, especially baseball statistics that measure in-game activity.
+
+![Sabermetrics](~/Desktop/Projects/Baseball/data/graphs.png)
+
+
+## What is Sabermetrics?
+
+
+Sabermetrics is the empirical analysis of baseball, especially baseball statistics that measure in-game activity.
+
+![Sabermetrics](~/Desktop/Projects/Baseball/data/Picture1.png)
+
+
+## Lahman’s Baseball Database
+
+http://www.seanlahman.com/baseball-archive/statistics
+
+
+## Basic Graphs  
+
+Need package:  "graphics"
+
+Need datafile:  "hofbatting.csv"
+
+```{r,echo=FALSE}
+
+# Read the data frame
+##############################################
+# Traditional Graphics
+# Needs package "graphics"
+# Needs datafiles hofbatting.csv, 
+#   plus .csv files from the Lahman's database
+# 
+##############################################
+library("graphics")
+
+## set a ralitive path
+
+setwd("~/Desktop/Projects/Baseball/data")
+hof <- read.csv("hofbatting.csv")
+
+```
+
+
+
+
+
+
+- Generate traditional graphs for factor variable and numeric variable.
+- Scatter plots, pie pots, histogram, boxplots, etc.
+- Identify particular points from a plot.
+- Title, legend, axis lable, etc., for a graph.
+
+## Graphs for Factor Variables
+
+- Create a new factor variable "Era" from numeric variable "MidCareer".
+
+- **Frequency Table**
+
+```{r,echo=FALSE}
+hof$MidCareer <- with(hof, (From + To) / 2)
+# Creat Era
+hof$Era <- cut(hof$MidCareer,
+               breaks = c(1800, 1900, 1919, 1941, 1960, 1976, 1993, 2050),
+               labels = c("19th Century", "Lively Ball", "Dead Ball",
+                          "Integration", "Expansion", "Free Agency", 
+                          "Long Ball"))
+T.Era <- table(hof$Era)
+T.Era
+
+```
+
+
+
+## 
+
+- **Bar Graph & Pie Graph**
+
+```{r,echo=FALSE}
+par(mfrow=c(1,2))
+barplot(table(hof$Era), xlab="Era", ylab="Frequency", 
+        main="Era of the Nonpitching Hall of Famers")
+pie(table(hof$Era),main = "Era of the Nonpitching Hall of Famers")
+```
+
+## 
+
+- **Dotplot**
+
+```{r,echo=FALSE}
+
+T.Era <- table(hof$Era)
+dotchart(as.numeric(T.Era), labels=names(T.Era), xlab="Frequency",main="Dotplot of Era of the Nonpitching Hall of Famers")
+
+```
+
+## Graphs for Numeric Variables
+
+- **Scatterplot & Stripchart** 
+
+```{r,echo=FALSE}
+par(mfrow=c(1,2))
+plot(hof$MidCareer, main = "Scatterplot of MidCareer")
+stripchart(hof$MidCareer, method="jitter", pch=1, 
+           xlab="Mid Career", main = "Stripchart of MidCareer")
+
+```
+
+##
+
+- **Histogram & Density Plot**
+
+```{r,echo=FALSE}
+par(mfrow=c(1,2))
+hist(hof$MidCareer, xlab="Mid Career", main="Histogram of MidCareer")
+d <- density(hof$MidCareer)
+plot(d,main = "Density plot of MidCareer")
+```
+
+
+## Graphs for Two  Variables
+
+- **Scatterplot & Smoothing Curve**
+- How to identify specific points on a graph?
+
+```{r,echo=FALSE}
+with(hof, plot(MidCareer, OPS,main="OPS vs. MidCareer"))
+with(hof, lines(lowess(MidCareer, OPS, f=0.3)))
+
+```
+
+
+
+
+## 
+
+- **Parallel Stripcharts**
+
+```{r,echo=FALSE}
+hof$HR.Rate <- with(hof, HR / AB)
+par(plt = c(0.2, 0.94, 0.145, 0.883))
+stripchart(HR.Rate ~ Era, data = hof, las=2, main = "Era vs. Home Run Rate")
+```
+
+##
+
+- **Side-by-Side Boxplot**
+
+```{r,echo=FALSE}
+par(plt = c(0.2, 0.94, 0.145, 0.883))
+boxplot(HR.Rate ~ Era, data=hof,las = 2, horizontal = TRUE, main="Boxplot of Era vs. Home Run Rate")
+```
+
+How to save the graphs?
+
+## Exercises
+
+Graph the followings all together and save it as a pdf file.
+
+- Scatter plot of Middle Career
+
+- Density plot of Middle Career
+
+- Parallel Stripcharts: Era vs. Home Run Rate
+
+- Side-by-side boxplot: Era vs. Home Run Rate
+
+
+* Use the records in the year 2018
+
+
+## The Relation between Runs and Wins 
+
+Need package: "stats"
+
+Need datafile: "teams.csv"
+
+
+- Introduction to linear regression.
+- The Pythagorean formula for winning percentage.
+- Predictions.
+
+
+## 
+
+The *teams.csv* file from Lahman's database contains seasonal stats for major league teams. 
+
+Select the subset and calculate the new variables of interest.
+
+```{r,echo=FALSE}
+
+setwd("~/Desktop/Projects/Baseball/Data")
+teams <- read.csv("teams.csv")
+myteams <- subset(teams, yearID > 2000)[ , c("teamID", "yearID",
+                                             "lgID", "G", "W", "L", "R", "RA")]
+
+
+myteams$RD <- with(myteams, R - RA)
+myteams$Wpct <- with(myteams, W / (W + L))
+tail(myteams)
+
+
+```
+
+
+## Linear Regression
+
+A *Simple Linear Model*(SLM) has the following formula:
+$$
+Response = a + b \times Predictor + \epsilon
+$$
+where *a* and *b* are unknown constants and $\epsilon$ is the error term which captures all other factors influencing the dependent variable (Response).
+
+- Linear relationship 
+- Normality
+- No multicollinearity
+- No auto-correlation
+- Homoscedasticity
+
+##
+
+
+To predict a team's *winning percentage* using *runs scored*  with SLM, check the normality by generating QQ plots
+$$
+Wpct=a+b \times RD + \epsilon
+$$
+
+
+```{r,echo=FALSE}
+par(mfrow=c(1,2))
+qqnorm(myteams$Wpct, main = "Winning Percentage")
+qqnorm(myteams$RD, main = "Run Differential")
+
+```
+
+##
+
+
+Fit the regression line by "lm" function in "stats" package.
+
+```{r,echo=FALSE}
+myteams$RD <- with(myteams, R - RA)
+myteams$Wpct <- with(myteams, W / (W + L))
+
+plot(myteams$RD, myteams$Wpct,
+     xlab="Run Differential",
+     ylab="Winning Percentage",main="Scatterplot of Winning Percentage vs. Run Differential")
+
+
+linfit <- lm(Wpct ~ RD, data=myteams)
+
+abline(a=coef(linfit)[1], b=coef(linfit)[2], lwd=2)
+
+```
+
+##
+
+- **Residual Plot**
+
+```{r,echo=FALSE}
+
+
+myteams$linWpct <- predict(linfit)
+myteams$linResiduals <- residuals(linfit)
+
+# Residual plot
+plot(myteams$RD, myteams$linResiduals,
+     xlab="run differential",
+     ylab="residual",main="Residuals vs. Predicted")
+abline(h=0, lty=3)
+points(c(68, 88), c(.0749, -.0733), pch=19)
+text(68, .0749, "LAA '08", pos=4, cex=.8)
+text(88, -.0733, "CLE '06", pos=4, cex=.8)
+```
+
+##
+
+- Diagnostic Plot
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+plot(linfit)
+
+```
+
+
+
+
+
+## Pythagorean Formula
+
+Bill James empirically derived the non-linear formula to estimate winning percentage, called the Pythagorean expectation
+$$
+Wpct = \frac{R^k}{R^k+RA^k}
+$$
+
+```{r,echo=FALSE}
+
+myteams$pytWpct <- with(myteams, R ^ 2 / (R ^ 2 + RA ^ 2))
+
+myteams$pytResiduals <- myteams$Wpct - myteams$pytWpct
+par(mfrow=c(1,2))
+plot(myteams$linResiduals,
+     ylab="residuals",main="SLM")
+abline(h=0, lty=3)
+plot(myteams$pytResiduals,,ylab= "residuals",main = " Pythagorean Formula")
+abline(h=0, lty=3)
+
+```
+
+
+
+
+
+## Career Trajectories 
+
+Need packages: "car", "plyr", "ggplot2"
+
+Need datafiles: "Batting.csv", "Master.csv", "Fielding.csv"
+
+- Get the general information for players from a dataset.
+- Fit and plot trajectories.
+- Compare different players by computing similarity scores.
+- Find the peak age for players.
+
+## Mickey Mantel's Batting Trajectory
+
+It is believed that most players peak in their late 20s. While Mickey Mantle made an immediate impact on the New York Yankees at age 19. But injuries took a toll on Mantel's performance and his hitting declined until his retirement at age 36. 
+
+
+## 
+
+
+```{r,echo=FALSE}
+setwd("~/Desktop/Projects/Baseball/Data")
+Batting <- read.csv("Batting.csv")
+Master <- read.csv("Master.csv")
+
+# Get the first and last name of this player, and corresponding playerid
+mantle.info <- subset(Master, nameFirst=="Mickey" & nameLast=="Mantle")
+mantle.id <- as.character(mantle.info$playerID)
+
+library(car)
+
+## some statistics are not recored for older seasons, 
+## recoding the missing value "NA" to 0
+Batting$SF <- recode(Batting$SF, "NA = 0")
+Batting$HBP <- recode(Batting$HBP, "NA = 0")
+
+# Find the birth year of a player
+
+get.birthyear <- function(player.id){
+  playerline <- subset(Master, playerID == player.id)
+  birthyear <- playerline$birthYear
+  birthmonth <- playerline$birthMonth
+  ifelse(birthmonth >= 7, birthyear, birthyear + 1)
+}
+
+# get.birthyear(mantle.id)
+
+# Get the stats for player by player.id
+
+get.stats <- function(player.id){
+  d <- subset(Batting, playerID==player.id)
+  byear <- get.birthyear(player.id)
+  d$Age <- d$yearID - byear
+  d$SLG <- with(d, (H - X2B - X3B - HR +
+                      2 * X2B + 3 * X3B + 4 * HR) / AB)
+  d$OBP <- with(d, (H + BB) / (H + AB + BB + SF))
+  d$OPS <- with(d, SLG + OBP)
+  d
+}
+
+Mantle <- get.stats(mantle.id)
+
+with(Mantle, plot(Age, OPS, cex=1.5, pch=19), main = "Scatterplot of OPS against age for Mickey Mantle")
+
+```
+
+
+## Smooth Curve
+
+A convenient choice of smooth curve is a quadratic function of the form ( why subtract 30? ):
+$$
+A + B (Age-30) + C(Age-30)^2
+$$
+
+Answer the following questions:
+
+- What's the pratical meaning of the constant *A*?
+- What's the pratical meaning of the coefficient *C*?
+- When does the function reach its largest value?
+- What is the maximum value of the curve?
+
+
+## Fit the Smooth Curve
+
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+
+fit.model <- function(d){
+  fit <- lm(OPS ~ I(Age - 30) + I((Age - 30)^2), data = d)
+  b <- coef(fit)
+  Age.max <- 30 - b[2] / b[3] / 2
+  Max <- b[1] - b[2] ^ 2 / b[3] / 4
+  list(fit = fit, 
+       Age.max = Age.max, Max = Max)
+}
+
+F2 <- fit.model(Mantle)
+coef(F2$fit)
+c(F2$Age.max, F2$Max)
+```
+
+## Fit the Smooth Curve
+
+```{r,echo=FALSE}
+with(Mantle, plot(Age, OPS, cex=1.5, pch=19), main = "Scatterplot of OPS against age for Mickey Mantle")
+
+lines(Mantle$Age, predict(F2$fit, Age=Mantle$Age), lwd=3)
+abline(v = F2$Age.max, lwd=3, lty=2, col="grey")
+abline(h = F2$Max, lwd=3, lty=2, col="grey")
+text(29, .72, "Peak.age" , cex=2)
+text(20, 1, "Max", cex=2)
+
+
+
+```
+
+
+## Fit the Smooth Curve
+
+```{r,echo=TRUE}
+summary(F2$fit)
+```
+
+
+## Compare Trajectories
+
+To compare the trajectories of different players, it's reasonable to compute and compare the career statistics. Toward this goal, one needs to compute the career games played, at-bats, runs, hit, etc., for each player in the database.
+
+How to compute the career slugging percentage?
+
+SP = $\frac{Total \ Bases}{At \ Bats}=\frac{Hits + Doubles + 2\times Triples + 3 \times HR}{AB}$
+
+Bill James introduced the concept of **Similarity Scores** to facilitate the comparison of players on the basis of career statistics. 
+
+
+```{r,echo=FALSE}
+
+setwd("~/Desktop/Projects/Baseball/Data")
+Fielding <- read.csv("Fielding.csv")
+
+library(plyr)
+AB.totals <- ddply(Batting, .(playerID), 
+                   summarize, 
+                   Career.AB = sum(AB, na.rm = TRUE))
+Batting <- merge(Batting, AB.totals)
+Batting.2000 <- subset(Batting, Career.AB >=2000)
+
+find.position <- function(p){
+  positions <- c("OF", "1B", "2B", "SS", "3B", "C", "P", "DH")
+  d <- subset(Fielding, playerID == p)
+  count.games <- function(po)
+    sum(subset(d, POS == po)$G)
+  FLD <- sapply(positions, count.games)
+  positions[FLD == max(FLD)][1]
+}
+
+PLAYER <- as.character(unique(Batting.2000$playerID))
+POSITIONS <- sapply(PLAYER, find.position) #takes long time to complete!
+Fielding.2000 <- data.frame(playerID = names(POSITIONS),
+                            POS = POSITIONS)
+Batting.2000 <- merge(Batting.2000, Fielding.2000)
+
+# comparing career statistics
+
+library(plyr)
+C.totals <- ddply(Batting, .(playerID), 
+                  summarize, 
+                  C.G = sum(G, na.rm = TRUE),
+                  C.AB = sum(AB, na.rm = TRUE),
+                  C.R = sum(R, na.rm = TRUE),
+                  C.H = sum(H, na.rm = TRUE),
+                  C.2B = sum(X2B, na.rm = TRUE),
+                  C.3B = sum(X3B, na.rm = TRUE),
+                  C.HR = sum(HR, na.rm = TRUE),
+                  C.RBI = sum(RBI, na.rm = TRUE),
+                  C.BB = sum(BB, na.rm = TRUE),
+                  C.SO = sum(SO, na.rm = TRUE),
+                  C.SB = sum(SB, na.rm = TRUE))
+
+C.totals$C.AVG <- with(C.totals, C.H / C.AB)
+C.totals$C.SLG <- with(C.totals, 
+                       (C.H - C.2B - C.3B - C.HR + 2 * C.2B +
+                          3 * C.3B + 4 * C.HR) / C.AB)
+
+C.totals <- merge(C.totals, Fielding.2000)
+C.totals$Value.POS <- with(C.totals, 
+                           ifelse(POS=="C", 240,
+                                  ifelse(POS=="SS", 168,
+                                         ifelse(POS=="2B", 132,
+                                                ifelse(POS=="3B", 84,
+                                                       ifelse(POS=="OF", 48,
+                                                              ifelse(POS=="1B", 12, 0)))))))
+
+
+```
+
+
+## Similarity Score
+
+
+
+To compare two hitters, one starts at 1000 points and subtracts points based on the differences in different statistical categories. 1 points is subtracted for each of the following differences:
+
+ 20 games played, 75 at-bats, 10 runs scored, 15 hits, 5 doubles, 4 triples,  2 home runs,  10 runs batted in, 25 walks, 150 strikeouts,  20 stolen bases,  0.001 in batting average, 0.002 in slugging percentage
+
+
+In addition, one adds the difference between the fielding position values of the two players.
+
+## Similarity Score
+
+
+```{r,echo=FALSE}
+
+similar <- function(p, number=10){
+  P <- subset(C.totals, playerID == p)
+  C.totals$SS <- with(C.totals,
+                      1000 -
+                        floor(abs(C.G - P$C.G) / 20) -
+                        floor(abs(C.AB - P$C.AB) / 75) -
+                        floor(abs(C.R - P$C.R) / 10) -
+                        floor(abs(C.H - P$C.H) / 15) -
+                        floor(abs(C.2B - P$C.2B) / 5) -
+                        floor(abs(C.3B - P$C.3B) / 4) -
+                        floor(abs(C.HR - P$C.HR) / 2) -
+                        floor(abs(C.RBI - P$C.RBI) / 10) -
+                        floor(abs(C.BB - P$C.BB) / 25) -
+                        floor(abs(C.SO - P$C.SO) / 150) -
+                        floor(abs(C.SB - P$C.SB) / 20) - 
+                        floor(abs(C.AVG - P$C.AVG) / 0.001) - 
+                        floor(abs(C.SLG - P$C.SLG) / 0.002) -
+                        abs(Value.POS - P$Value.POS))
+  C.totals <- C.totals[order(C.totals$SS, decreasing = TRUE), ]  
+  C.totals[1:number, ]
+}
+
+similar(mantle.id, 6)
+```
+
+## Fit and Plot Trajectories
+
+- Mickey Mantle
+
+
+```{r,echo=FALSE,message=FALSE, warning=FALSE}
+
+collapse.stint <- function(d){
+  G <- sum(d$G); AB <- sum(d$AB); R <- sum(d$R)
+  H <- sum(d$H); X2B <- sum(d$X2B); X3B <- sum(d$X3B)
+  HR <- sum(d$HR); RBI <- sum(d$RBI); SB <- sum(d$SB)
+  CS <- sum(d$CS); BB <- sum(d$BB); SH <- sum(d$SH)
+  SF <- sum(d$SF); HBP <- sum(d$HBP)
+  SLG <- (H - X2B - X3B - HR + 2 * X2B +
+            3 * X3B + 4 * HR) / AB
+  OBP <- (H + BB + HBP) / (AB + BB + HBP + SF)
+  OPS <- SLG + OBP
+  data.frame(G = G, AB = AB, R = R, H = H, X2B = X2B,
+             X3B = X3B, HR = HR, RBI = RBI, SB = SB,
+             CS = CS, BB = BB, HBP = HBP, SH = SH, SF = SF, 
+             SLG = SLG, OBP = OBP, OPS = OPS,
+             Career.AB = d$Career.AB[1], POS = d$POS[1])
+}
+
+Batting.2000 <- ddply(Batting.2000, 
+                      .(playerID, yearID), collapse.stint) #requires a long time to complete
+
+player.list <- as.character(unique(Batting.2000$playerID))
+birthyears <- sapply(player.list, get.birthyear) #requires a long time to complete
+Batting.2000 <- merge(Batting.2000,
+                      data.frame(playerID=player.list,
+                                 Birthyear=birthyears))
+Batting.2000$Age <- with(Batting.2000, yearID - Birthyear)
+
+Batting.2000 <- Batting.2000[complete.cases(Batting.2000$Age), ]
+
+# fitting and plotting trajectories
+
+fit.traj <- function(d){
+  fit <- lm(OPS ~ I(Age - 30) + I((Age - 30)^2), data = d)
+  data.frame(Age = d$Age, Fit = predict(fit, Age = d$Age))
+}
+
+plot.traj2 <- function(first, last, n.similar = 5, ncol){
+  require(plyr)
+  require(ggplot2)
+  get.name <- function(playerid){
+    d1 <- subset(Master, playerID == playerid)
+    with(d1, paste(nameFirst, nameLast))
+  }
+  player.id <- subset(Master, 
+                      nameFirst == first & nameLast == last)$playerID
+  player.id <- as.character(player.id)
+  player.list <- as.character(similar(player.id, n.similar)$playerID)
+  Batting.new <- subset(Batting.2000, playerID %in% player.list)
+  
+  F2 <- ddply(Batting.new, .(playerID), fit.traj)
+  F2 <- merge(F2, 
+              data.frame(playerID = player.list,
+                         Name = sapply(as.character(player.list), get.name)))
+  
+  print(ggplot(F2, aes(Age, Fit)) + geom_line(size=1.5) +
+          facet_wrap(~ Name, ncol=ncol) + theme_bw())
+  return(Batting.new)
+}
+
+d <- plot.traj2("Mickey", "Mantle", 6, 2)
+
+
+```
+
+## Fit and Plot Trajectories
+
+- Derek Jeter
+
+
+```{r,echo=FALSE}
+d <- plot.traj2("Derek", "Jeter", 9, 3)
+```
+
+
+
+
+## Summary
+
+- There are players such as Eddie Mathews, Frank Thomas, Mickey Mantle, and Roberto Alomar who appeared to peak early in their careers.
+
+- In contrast, other players such as Mike Schmidt, Craig Biggio, and Julio Franco who peaked in their 30s.
+
+- The players also show differneces in the shape of the trajectory. Johnny Damon and Julio Franco had relatively constant trajectories, and Frankie Frisch and Roberto Alomar had trajectories with high curvature.
+
+
+
+
+
+
+
+## Summary
+
+
+```{r,echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+fit.traj2 <- function(d){
+  f <- lm(OPS ~ I(Age - 30) + I((Age - 30)^2), data = d)
+  b <- coef(f)
+  Age.max <- round(30 - b[2] / b[3] / 2, 1)
+  Max <- round(b[1] - b[2] ^ 2 / b[3] / 4, 3)
+  data.frame(Age.max = Age.max, Max = Max, 
+             Curve = round(b[3], 5))
+}
+
+ d <- plot.traj2("Derek", "Jeter", 9, 3)
+
+# Show the summary of players
+```
+
+
+
+```{r,echo=FALSE}
+S <- ddply(d, .(playerID), fit.traj2)
+S
+
+```
+
+## Summary
+
+```{r,echo=FALSE}
+
+with(S, plot(Age.max, Curve, pch=19, cex=1.5,
+             xlab="Peak Age", ylab="Curvature",
+             xlim=c(27, 36), ylim=c(-0.0035, 0)))
+S$lastNames <- as.character(subset(Master, 
+                                   playerID %in% S$playerID)$nameLast)
+with(S, text(Age.max, Curve, lastNames, pos=3))
+```
+
+
+
+
+## Run Expectancy
+
+Need package: "plyr"
+
+Need datafiles: "all2011.csv", "fields.csv", "roster2011.csv"
+
+- Find the Runs Expectancy Matrixs
+- Case Study (See example code)
+
+
+
+
+
+## 
+
+**The Runs Expectancy Matrix**
+
+Each base can be occupied by a runner or empty.
+
+The number of outs can be 0, 1, or 2.
+
+For each combination, one is interested in computing the average number of runs scored in the remainder of the inning. 
+
+Arrange the average runs as a table classified by runners and outs, this display is called the **Runs Expectancy Matrix**.
+
+
+
+
+
+
+```{r,echo=FALSE}
+
+
+
+## Read the play-by-play database for 2011 season 
+## fields.csv contains the names of the variables
+setwd("~/Desktop/Projects/Baseball/Data")
+data2011 <- read.csv("all2011.csv", header=FALSE)
+fields <- read.csv("fields.csv")
+
+# Use the "Header" column to name the column in "data2011"
+names(data2011) <- fields[, "Header"]
+
+# create new variable
+data2011$RUNS <- with(data2011, AWAY_SCORE_CT + HOME_SCORE_CT)
+data2011$HALF.INNING <- with(data2011, 
+                            paste(GAME_ID, INN_CT, BAT_HOME_ID))
+
+data2011$RUNS.SCORED <- with(data2011, (BAT_DEST_ID > 3) +
+  (RUN1_DEST_ID > 3) + (RUN2_DEST_ID > 3) + (RUN3_DEST_ID > 3))
+
+RUNS.SCORED.INNING <- aggregate(data2011$RUNS.SCORED, 
+                        list(HALF.INNING = data2011$HALF.INNING), sum)
+
+RUNS.SCORED.START <- aggregate(data2011$RUNS, 
+                       list(HALF.INNING = data2011$HALF.INNING), "[", 1)
+
+MAX <- data.frame(HALF.INNING=RUNS.SCORED.START$HALF.INNING)
+MAX$x <- RUNS.SCORED.INNING$x + RUNS.SCORED.START$x
+data2011 <- merge(data2011, MAX)
+N <- ncol(data2011)
+names(data2011)[N] <- "MAX.RUNS"
+
+data2011$RUNS.ROI <- data2011$MAX.RUNS - data2011$RUNS
+
+
+##################################################
+# Creating the Matrix
+##################################################
+
+
+get.state <- function(runner1, runner2, runner3, outs){
+  runners <- paste(runner1, runner2, runner3, sep="")
+  paste(runners, outs)                      
+}
+
+RUNNER1 <- ifelse(as.character(data2011[,"BASE1_RUN_ID"])=="", 0, 1)
+RUNNER2 <- ifelse(as.character(data2011[,"BASE2_RUN_ID"])=="", 0, 1)
+RUNNER3 <- ifelse(as.character(data2011[,"BASE3_RUN_ID"])=="", 0, 1)
+data2011$STATE <- get.state(RUNNER1, RUNNER2, RUNNER3, data2011$OUTS_CT)
+
+NRUNNER1 <- with(data2011, as.numeric(RUN1_DEST_ID==1 | BAT_DEST_ID==1))
+NRUNNER2 <- with(data2011, as.numeric(RUN1_DEST_ID==2 | RUN2_DEST_ID==2 | BAT_DEST_ID==2))
+NRUNNER3 <- with(data2011, as.numeric(RUN1_DEST_ID==3 | RUN2_DEST_ID==3 |
+  RUN3_DEST_ID==3 | BAT_DEST_ID==3))
+NOUTS <- with(data2011, OUTS_CT + EVENT_OUTS_CT)
+
+data2011$NEW.STATE <- get.state(NRUNNER1, NRUNNER2, NRUNNER3, NOUTS)
+
+data2011 <- subset(data2011, (STATE!=NEW.STATE) | (RUNS.SCORED>0))
+
+
+
+library(plyr)
+data.outs <- ddply(data2011, .(HALF.INNING), summarize,
+                  Outs.Inning = sum(EVENT_OUTS_CT))
+data2011 <- merge(data2011, data.outs)
+data2011C <- subset(data2011, Outs.Inning == 3)
+
+RUNS <- with(data2011C, aggregate(RUNS.ROI, list(STATE), mean))
+RUNS$Outs <- substr(RUNS$Group, 5, 5)
+RUNS <- RUNS[order(RUNS$Outs), ]
+
+RUNS.out <- matrix(round(RUNS$x, 2), 8, 3)
+dimnames(RUNS.out)[[2]] <- c("0 outs", "1 out", "2 outs")
+dimnames(RUNS.out)[[1]] <- c("000", "001", "010", "011", "100", "101", "110", "111")
+
+RUNS.2002 <- matrix(c(.51, 1.40, 1.14,  1.96, .90, 1.84, 1.51, 2.33,
+               .27,  .94,  .68,  1.36, .54, 1.18,  .94, 1.51,
+               .10,  .36,  .32,   .63, .23, .52,   .45, .78),
+               8, 3)
+dimnames(RUNS.2002) <- dimnames(RUNS.out)
+
+
+```
+
+
+##
+
+```{r,echo=FALSE}
+cbind(RUNS.out, RUNS.2002)
+```
+
+It is remarkable that these run expectancy values have not changed over the recent history of baseball. This indicates that there have been little changes in the average runscoring tendencies of this team between 2002 and 2011.
+
+
+
+
