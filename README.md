@@ -1,5 +1,5 @@
-# Workshop
-Workshop on Baseball Analytics.
+# UConn Sports Analytics Symposium 2020
+
 
 For UCSAS2020 (50 mins): 
 
