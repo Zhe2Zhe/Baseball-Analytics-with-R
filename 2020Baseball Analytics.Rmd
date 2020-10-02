@@ -1,0 +1,169 @@
+---
+title: "Baseball Analytics"
+author: "Zhe"
+date: 
+output: html_document
+---
+
+In this short tutorial, we will use some variables(Wins, Runs, Run Differentials...) to predict the winning percentage. Before starting the analysis, make sure the following packages are ready on your machine. If not, put "install.packages("package name")" in the console window to install the packages.
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+# install.packages("Lahman")
+# install.packages("dplyr")
+# install.packages("ggplot2")
+# install.packages("GGally")
+
+library(Lahman)
+library(dplyr)
+library(ggplot2)
+library(GGally)
+```
+
+## Data wrangling with "dplyr"
+
+
+
+```{r data,echo=T}
+
+
+LahmanData
+```
+
+
+
+
+```{r overview,echo=T}
+head(Teams)
+tail(Teams)
+str(Teams)
+dim(Teams)
+```
+
+
+
+```{r dplyr,echo=T}
+# package "dplyr": piping operator %>%
+
+a <- c(1,2,3)
+a %>% 
+  mean()
+
+mean(a)
+
+
+# select
+# filter
+# mutate
+# arrange
+# group_by
+# summarize
+
+Teams %>%
+  select(yearID, lgID, , W, L, R, RA) %>%
+  filter(yearID == 2014) %>%
+  mutate(wpct = R^1.83 / (R^1.83 + RA^1.83), 
+         expwin = round(wpct * (W+L)), diff = W - expwin,RD = R-RA) %>%
+  arrange(lgID) %>%
+  group_by(lgID) %>%
+  summarize(mean.wpct = mean(wpct)) 
+
+```
+
+
+```{r newdata, echo=T}
+# Create new dataset 
+mydata <- Teams %>%
+  select(yearID, lgID, teamID, W, L, R, RA) %>%
+  filter(yearID == 2014) %>%
+  mutate(wpct = R^2 / (R^2 + RA^2),  RD = R - RA,
+         expwin = round(wpct * (W+L)), diff = W - expwin)
+
+head(mydata)
+
+mydata
+
+
+```
+
+
+## Visuliazition with "ggplot2"
+
+### Histogram
+
+```{r histogram, echo=T}
+
+# histogram
+
+hist(mydata$W)
+
+
+ggplot(mydata) + 
+  geom_histogram(aes(x = W), binwidth = 5, color = "white", fill = "grey") +
+  ggtitle("Histogram") + xlab("Win") + ylab("Frequency")
+
+ggplot(mydata) + 
+  geom_histogram(aes(x = W, fill = lgID), binwidth = 5, 
+                 color = "white" , position = "identity", alpha = 0.5) +
+  ggtitle("Histogram") + xlab("Win") + ylab("Frequency")
+
+ggplot(mydata) + 
+  geom_histogram(aes(x = W, fill = lgID), binwidth = 5, 
+                 color = "white" ) +
+  ggtitle("Histogram") + xlab("Win") + ylab("Frequency") +
+  facet_wrap(~lgID)
+```
+
+### Scatter Plot
+
+```{r scatter, echo=TRUE}
+
+plot(mydata$RD,mydata$W)
+
+
+
+
+ggplot(mydata) + geom_point( aes(x = RD, y = W, color = lgID)) + 
+  ggtitle("Histogram of RD vs. W") + xlab("") + ylab("")
+
+
+ggplot(mydata) + geom_point( aes(x = RD, y = W, color = lgID)) + 
+  ggtitle("Histogram of RD vs. W") + xlab("Run Differential") + ylab("Win") +
+  facet_wrap(~lgID)
+
+
+
+
+
+
+```
+
+
+## Linear Regression
+
+```{r,echo=T}
+ggplot(mydata, aes(x = RD, y = W)) + geom_point() + stat_smooth(method = "lm")
+
+
+
+mod1 <- lm(W ~ RD, data = mydata)
+mod1
+summary(mod1)
+
+par(mfrow=c(2,2))
+plot(mod1)
+par(mfrow = c(1,1))
+```
+
+
+## Pythagorean Formula
+
+
+```{r,echo=T}
+## Pythagorean Formula
+
+plot(mydata$expwin,mydata$W)
+
+
+# identify(mydata$expwin,mydata$W,mydata$teamID,n=1)
+```
